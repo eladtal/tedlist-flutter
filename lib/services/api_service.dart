@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/env.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiService {
   // Base URL from environment configuration
@@ -16,17 +17,28 @@ class ApiService {
   
   // Get authentication token
   Future<String?> getToken() async {
-    return await _secureStorage.read(key: 'auth_token');
+    final token = await _secureStorage.read(key: 'auth_token');
+    debugPrint('getToken: token=$token');
+    return token;
   }
   
   // Save authentication token
   Future<void> saveToken(String token) async {
     await _secureStorage.write(key: 'auth_token', value: token);
+    debugPrint('saveToken: token=$token');
   }
   
   // Clear authentication token (logout)
+  Future<void> logout() async {
+    // Do not clear the token, so biometric login remains available
+    // Optionally, clear other user data here if needed
+    debugPrint('logout: token NOT cleared, biometric login remains available');
+  }
+  
+  // Explicitly clear authentication token (for 'Forget Biometric Login')
   Future<void> clearToken() async {
     await _secureStorage.delete(key: 'auth_token');
+    debugPrint('clearToken: token deleted');
   }
   
   // Helper for HTTP headers
@@ -165,10 +177,6 @@ class ApiService {
     }
     
     return response;
-  }
-  
-  Future<void> logout() async {
-    await clearToken();
   }
   
   // Item methods

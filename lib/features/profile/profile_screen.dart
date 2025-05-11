@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/api_service.dart';
+import '../../services/biometric_service.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -14,6 +15,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _apiService = ApiService();
   bool _isLoading = false;
   Map<String, dynamic>? _userData;
+  bool _biometricForgotten = false;
 
   @override
   void initState() {
@@ -54,6 +56,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _forgetBiometricLogin() async {
+    setState(() => _isLoading = true);
+    await BiometricService.setBiometricEnabled(false);
+    await _apiService.clearToken();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Biometric login forgotten. You will need to log in with email and password next time.')),
+      );
+      setState(() {
+        _isLoading = false;
+        _biometricForgotten = true;
+      });
     }
   }
 
@@ -176,6 +193,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           onTap: () {
                             // TODO: Navigate to privacy settings
                           },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.fingerprint),
+                          title: Text(_biometricForgotten ? 'Biometric login forgotten' : 'Forget Biometric Login'),
+                          trailing: const Icon(Icons.chevron_right),
+                          enabled: !_biometricForgotten && !_isLoading,
+                          onTap: (!_biometricForgotten && !_isLoading) ? _forgetBiometricLogin : null,
                         ),
                       ],
                     ),
