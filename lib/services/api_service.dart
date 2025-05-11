@@ -208,7 +208,15 @@ class ApiService {
   }
   
   Future<void> deleteItem(String itemId) async {
-    await delete('items/$itemId');
+    try {
+      final response = await delete('items/$itemId');
+      debugPrint('Delete response: $response');
+      // The response might be null for successful deletes
+      return;
+    } catch (e) {
+      debugPrint('Error deleting item: $e');
+      rethrow;
+    }
   }
   
   // Trade methods

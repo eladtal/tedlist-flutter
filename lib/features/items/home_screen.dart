@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/api_service.dart';
 import '../../config/env.dart';
+import 'item_detail_screen.dart';
+import '../../services/event_service.dart';
+import 'dart:async';
+import '../../providers/item_provider.dart';
 
 String getProxyImageUrl(dynamic imageUrl) {
   if (imageUrl == null || imageUrl == '') return '';
@@ -22,25 +26,90 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  late Future<List<dynamic>> _itemsFuture;
+class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
+  StreamSubscription? _eventSubscription;
 
   @override
   void initState() {
     super.initState();
-    _itemsFuture = ApiService().getItems();
-  }
-
-  Future<void> _refreshItems() async {
-    setState(() {
-      _itemsFuture = ApiService().getItems();
+    // Register the observer
+    WidgetsBinding.instance.addObserver(this);
+    
+    // Schedule provider refresh for after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(itemsProvider.notifier).loadItems();
     });
-    await _itemsFuture;
+    
+    // Subscribe to global events
+    _eventSubscription = eventService.onEvent.listen((event) {
+      debugPrint('🎯 Received event in HomeScreen: ${event.event} with data: ${event.data}');
+      
+      // Refresh on important events - but scheduled after frame
+      if (event.event == AppEvent.itemDeleted || 
+          event.event == AppEvent.itemAdded || 
+          event.event == AppEvent.refreshNeeded) {
+        debugPrint('⚡ Refreshing items due to event: ${event.event}');
+        // Use provider to refresh after current frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(itemsProvider.notifier).loadItems();
+        });
+        
+        // Show success message if requested
+        if (event.data is Map && 
+            event.data['showMessage'] == true && 
+            event.data['title'] != null) {
+          // Show success message for deletion
+          if (event.event == AppEvent.itemDeleted && mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('"${event.data['title']}" successfully deleted'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 3),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            });
+          }
+        }
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    // Remove the observer
+    WidgetsBinding.instance.removeObserver(this);
+    // Cancel event subscription
+    _eventSubscription?.cancel();
+    super.dispose();
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Do NOT refresh items here - it will cause errors
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Refresh items when app comes to the foreground - but schedule it safely
+    if (state == AppLifecycleState.resumed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _refreshItems();
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final itemsAsync = ref.watch(itemsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -54,19 +123,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<List<dynamic>>(
-        future: _itemsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: \\${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+      body: itemsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
+        data: (items) {
+          if (items.isEmpty) {
             return const Center(child: Text('No items found.'));
           }
-          final items = snapshot.data!;
           return RefreshIndicator(
-            onRefresh: _refreshItems,
+            onRefresh: () async {
+              await ref.read(itemsProvider.notifier).loadItems();
+            },
             child: CustomScrollView(
               slivers: [
                 // Categories
@@ -164,12 +231,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       (item['images'] is List && item['images'].isNotEmpty) ? item['images'][0] : null
     );
     // Debug: Print the image URLs for inspection
-    debugPrint('Item: \\${item['title'] ?? item['id']}');
-    debugPrint('  images: \\${item['images']}');
-    debugPrint('  imageUrl used: \\${imageUrl}');
+    debugPrint('Item: ${item['title'] ?? item['id']}');
+    debugPrint('  images: ${item['images']}');
+    debugPrint('  imageUrl used: ${imageUrl}');
     return GestureDetector(
-      onTap: () {
-        // TODO: Navigate to item detail screen
+      onTap: () async {
+        debugPrint('Item card tapped: ${item['title']}');
+        // Navigate to detail and WAIT for result
+        final result = await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ItemDetailScreen(item: item),
+          ),
+        );
+        
+        debugPrint('Navigation result from detail screen: $result');
+        
+        // Refresh regardless of result - this ensures we have current data
+        debugPrint('Refreshing items list after returning from detail screen');
+        await _refreshItems();
       },
       child: Card(
         clipBehavior: Clip.antiAlias,
@@ -251,5 +330,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _refreshItems() async {
+    debugPrint('Refreshing items list using provider...');
+    await ref.read(itemsProvider.notifier).loadItems();
   }
 } 

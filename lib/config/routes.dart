@@ -8,9 +8,20 @@ import '../features/items/home_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/items/publish_item_screen.dart';
 
+// Static navigation class that can be called from anywhere
+class AppRouter {
+  static late GoRouter router;
+  
+  // Direct navigation to home without depending on context
+  static void navigateToHome() {
+    debugPrint('🔥 Forcing direct navigation to home');
+    router.go('/');
+  }
+}
+
 // Router provider
 final routerProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/login',
     routes: [
       GoRoute(
@@ -26,7 +37,29 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/',
             name: 'home',
-            builder: (context, state) => const HomeScreen(),
+            builder: (context, state) {
+              // Check if we just deleted an item and should show a success message
+              final extra = state.extra as Map<String, dynamic>?;
+              if (extra != null && extra.containsKey('forceRebuild')) {
+                debugPrint('🔄 Home route forced rebuild with: $extra');
+                
+                // Show success message after navigation
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('"${extra['itemTitle']}" successfully deleted'),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 3),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                });
+              }
+              
+              return const HomeScreen();
+            },
           ),
           GoRoute(
             path: '/publish',
@@ -38,15 +71,33 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'profile',
             builder: (context, state) => const ProfileScreen(),
           ),
+          GoRoute(
+            path: '/home-after-delete',
+            name: 'homeAfterDelete',
+            builder: (context, state) {
+              // Show success message from parameters if available
+              final params = state.extra as Map<String, dynamic>?;
+              if (params != null && params['showSuccess'] == true && params['itemTitle'] != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('"${params['itemTitle']}" successfully deleted'),
+                      backgroundColor: Colors.green,
+                      duration: const Duration(seconds: 3),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                });
+              }
+              return const HomeScreen();
+            },
+          ),
         ],
       ),
     ],
     // Redirect to login if not authenticated
     redirect: (context, state) {
       // TODO: Add authentication check logic when auth service is implemented
-      // Example:
-      // final isLoggedIn = ref.read(authProvider).isLoggedIn;
-      // if (!isLoggedIn && state.fullPath != '/login') return '/login';
       return null;
     },
     // Error page
@@ -56,6 +107,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ),
   );
+  
+  // Store the router in our static class for global access
+  AppRouter.router = router;
+  
+  return router;
 });
 
 class ScaffoldWithBottomNav extends StatelessWidget {
