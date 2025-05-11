@@ -182,7 +182,17 @@ class ApiService {
   
   // Item methods
   Future<List<dynamic>> getItems() async {
-    return await get('items');
+    final response = await get('items');
+    // If the backend returns { items: [...] }, extract the list
+    if (response is Map<String, dynamic> && response.containsKey('items')) {
+      return response['items'] as List<dynamic>;
+    }
+    // If the backend returns a list directly
+    if (response is List) {
+      return response;
+    }
+    // Otherwise, return an empty list
+    return [];
   }
   
   Future<Map<String, dynamic>> getItemDetails(String itemId) async {
