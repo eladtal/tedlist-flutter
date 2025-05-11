@@ -26,7 +26,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _loadUserData() async {
     try {
       setState(() => _isLoading = true);
-      final response = await _apiService.get('auth/validate');
+      final response = await _apiService.get('api/auth/validate');
       setState(() {
         _userData = response;
         _isLoading = false;

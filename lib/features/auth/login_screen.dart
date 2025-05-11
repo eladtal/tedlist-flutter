@@ -153,103 +153,112 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Logo and App name
-                const Icon(
-                  Icons.pets, // Placeholder for teddy bear logo
-                  size: 80,
-                  color: Color(0xFFEF5350), // Teddy Red
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Tedlist',
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF3E3C3A), // Teddy Brown
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-                
-                // Email field
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                
-                // Password field
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock),
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                
-                // Login button
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Logo and App name
+                        const Icon(
+                          Icons.pets, // Placeholder for teddy bear logo
+                          size: 80,
+                          color: Color(0xFFEF5350), // Teddy Red
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Tedlist',
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF3E3C3A), // Teddy Brown
                           ),
-                        )
-                      : const Text('Log In'),
-                ),
-                if (_showBiometric) ...[
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _loginWithBiometrics,
-                    icon: const Icon(Icons.fingerprint),
-                    label: const Text('Login with Fingerprint'),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 40),
+                        
+                        // Email field
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.email),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            if (!value.contains('@')) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Password field
+                        TextFormField(
+                          controller: _passwordController,
+                          decoration: const InputDecoration(
+                            labelText: 'Password',
+                            prefixIcon: Icon(Icons.lock),
+                          ),
+                          obscureText: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            if (value.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Login button
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _login,
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text('Log In'),
+                        ),
+                        if (_showBiometric) ...[
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _isLoading ? null : _loginWithBiometrics,
+                            icon: const Icon(Icons.fingerprint),
+                            label: const Text('Login with Fingerprint'),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        
+                        // Register link
+                        TextButton(
+                          onPressed: () {
+                            // TODO: Navigate to register screen when created
+                          },
+                          child: const Text('Don\'t have an account? Sign up'),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-                const SizedBox(height: 16),
-                
-                // Register link
-                TextButton(
-                  onPressed: () {
-                    // TODO: Navigate to register screen when created
-                  },
-                  child: const Text('Don\'t have an account? Sign up'),
                 ),
-              ],
+              ),
             ),
           ),
         ),

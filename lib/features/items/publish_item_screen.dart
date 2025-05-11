@@ -1,67 +1,129 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/api_service.dart';
+import '../../services/vision_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PublishItemScreen extends StatefulWidget {
+class PublishItemScreen extends ConsumerStatefulWidget {
   const PublishItemScreen({super.key});
 
   @override
-  State<PublishItemScreen> createState() => _PublishItemScreenState();
+  ConsumerState<PublishItemScreen> createState() => _PublishItemScreenState();
 }
 
-class _PublishItemScreenState extends State<PublishItemScreen> {
+class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _descController = TextEditingController();
-  String? _category;
-  String? _condition;
-  List<XFile> _images = [];
-  bool _isLoading = false;
-  final _picker = ImagePicker();
+  final _descriptionController = TextEditingController();
+  final _brandController = TextEditingController();
+  final _estimatedValueController = TextEditingController();
+  
+  File? _selectedImage;
+  String _category = 'Other';
+  String _condition = 'Good';
+  List<String> _keywords = [];
+  bool _isAnalyzing = false;
+  String _loadingMessage = "Teaching AI to appreciate your item's beauty...";
+  Timer? _loadingMessageTimer;
 
-  final List<String> _categories = [
-    'Electronics', 'Furniture', 'Clothing', 'Books', 'Sports', 'Other'
-  ];
-  final List<String> _conditions = [
-    'New', 'Like New', 'Good', 'Fair', 'Poor'
-  ];
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _brandController.dispose();
+    _estimatedValueController.dispose();
+    _loadingMessageTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _pickImage() async {
-    if (_images.length >= 3) return;
-    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (picked != null) {
-      setState(() => _images.add(picked));
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (image != null) {
+      setState(() {
+        _selectedImage = File(image.path);
+      });
     }
   }
 
-  Future<void> _takePhoto() async {
-    if (_images.length >= 3) return;
-    final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-    if (picked != null) {
-      setState(() => _images.add(picked));
+  Future<void> _analyzeImage() async {
+    if (_selectedImage == null) return;
+
+    final visionService = ref.read(visionServiceProvider);
+    debugPrint('Starting image analysis...');
+    
+    setState(() {
+      _isAnalyzing = true;
+      _loadingMessage = visionService.getNextLoadingMessage();
+    });
+    debugPrint('Initial loading message: $_loadingMessage');
+
+    // Start a timer to update the loading message every 2 seconds
+    _loadingMessageTimer?.cancel();
+    _loadingMessageTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_isAnalyzing && mounted) {
+        setState(() {
+          _loadingMessage = visionService.getNextLoadingMessage();
+        });
+        debugPrint('Updated loading message: $_loadingMessage');
+      } else {
+        timer.cancel();
+      }
+    });
+
+    try {
+      final result = await visionService.analyzeImage(_selectedImage!);
+      
+      if (result['success'] == true && result['data'] != null) {
+        final data = result['data'];
+        setState(() {
+          _titleController.text = data['title'] ?? '';
+          _descriptionController.text = data['description'] ?? '';
+          _category = data['category'] ?? 'Other';
+          _condition = data['condition'] ?? 'Good';
+          _brandController.text = data['brand'] ?? '';
+          _estimatedValueController.text = data['estimatedValue'] ?? '';
+          if (data['keywords'] != null) {
+            _keywords = List<String>.from(data['keywords']);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error analyzing image: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+        });
+        debugPrint('Analysis complete, isAnalyzing: $_isAnalyzing');
+      }
     }
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _images.isEmpty) return;
-    setState(() => _isLoading = true);
+    if (!_formKey.currentState!.validate() || _selectedImage == null) return;
+    setState(() => _isAnalyzing = true);
     try {
-      // TODO(elad) – Integrate OpenAI for image recognition and description [2025-05-04]
-      // 1. Upload images to backend (which uploads to S3)
-      List<String> imageUrls = [];
-      for (final img in _images) {
-        final url = await ApiService().uploadImage(File(img.path));
-        imageUrls.add(url);
-      }
+      // 1. Upload image to backend (which uploads to S3)
+      final url = await ApiService().uploadImage(_selectedImage!);
       // 2. Submit item details to backend
       await ApiService().createItem({
         'title': _titleController.text.trim(),
-        'description': _descController.text.trim(),
+        'description': _descriptionController.text.trim(),
         'category': _category,
         'condition': _condition,
-        'images': imageUrls,
+        'images': [url],
+        'brand': _brandController.text.trim(),
+        'estimatedValue': _estimatedValueController.text.trim(),
+        'keywords': _keywords,
       });
       
       if (!mounted) return;
@@ -82,7 +144,7 @@ class _PublishItemScreenState extends State<PublishItemScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isAnalyzing = false);
     }
   }
 
@@ -104,71 +166,70 @@ class _PublishItemScreenState extends State<PublishItemScreen> {
               ),
               const SizedBox(height: 12),
               TextFormField(
-                controller: _descController,
+                controller: _descriptionController,
                 decoration: const InputDecoration(labelText: 'Description'),
                 maxLines: 3,
                 validator: (v) => v == null || v.isEmpty ? 'Enter a description' : null,
               ),
               const SizedBox(height: 12),
+              TextFormField(
+                controller: _brandController,
+                decoration: const InputDecoration(labelText: 'Brand'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _estimatedValueController,
+                decoration: const InputDecoration(labelText: 'Estimated Value'),
+              ),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _category,
-                items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (v) => setState(() => _category = v),
+                items: const [
+                  DropdownMenuItem<String>(value: 'Electronics', child: Text('Electronics')),
+                  DropdownMenuItem<String>(value: 'Furniture', child: Text('Furniture')),
+                  DropdownMenuItem<String>(value: 'Clothing', child: Text('Clothing')),
+                  DropdownMenuItem<String>(value: 'Books', child: Text('Books')),
+                  DropdownMenuItem<String>(value: 'Sports', child: Text('Sports')),
+                  DropdownMenuItem<String>(value: 'Other', child: Text('Other')),
+                ],
+                onChanged: (v) => setState(() => _category = v ?? 'Other'),
                 decoration: const InputDecoration(labelText: 'Category'),
                 validator: (v) => v == null ? 'Select a category' : null,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _condition,
-                items: _conditions.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (v) => setState(() => _condition = v),
+                items: const [
+                  DropdownMenuItem<String>(value: 'New', child: Text('New')),
+                  DropdownMenuItem<String>(value: 'Like New', child: Text('Like New')),
+                  DropdownMenuItem<String>(value: 'Good', child: Text('Good')),
+                  DropdownMenuItem<String>(value: 'Fair', child: Text('Fair')),
+                  DropdownMenuItem<String>(value: 'Poor', child: Text('Poor')),
+                ],
+                onChanged: (v) => setState(() => _condition = v ?? 'Good'),
                 decoration: const InputDecoration(labelText: 'Condition'),
                 validator: (v) => v == null ? 'Select a condition' : null,
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text('Gallery'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: _takePhoto,
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Camera'),
-                  ),
-                ],
+              ElevatedButton.icon(
+                onPressed: _pickImage,
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Select Image'),
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                height: 100,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _images.length,
-                  itemBuilder: (context, i) => Stack(
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        child: Image.file(File(_images[i].path), width: 100, height: 100, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _images.removeAt(i)),
-                          child: const CircleAvatar(radius: 12, child: Icon(Icons.close, size: 16)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              if (_selectedImage != null)
+                Image.file(_selectedImage!, height: 200, fit: BoxFit.cover),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _isAnalyzing ? null : _analyzeImage,
+                child: _isAnalyzing 
+                    ? const CircularProgressIndicator()
+                    : const Text('Analyze Image'),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _isLoading ? null : _submit,
-                child: _isLoading ? const CircularProgressIndicator() : const Text('Publish'),
+                onPressed: _isAnalyzing ? null : _submit,
+                child: _isAnalyzing ? const CircularProgressIndicator() : const Text('Publish'),
               ),
             ],
           ),

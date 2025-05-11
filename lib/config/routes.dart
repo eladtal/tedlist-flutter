@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-// Import screens as they are created
-import '../features/auth/login_screen.dart';
+// Import screens from features
 import '../features/items/home_screen.dart';
-import '../features/profile/profile_screen.dart';
 import '../features/items/publish_item_screen.dart';
+import '../features/profile/profile_screen.dart';
+import '../features/auth/login_screen.dart';
+import '../features/auth/register_screen.dart';
 
 // Static navigation class that can be called from anywhere
 class AppRouter {

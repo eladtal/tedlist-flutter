@@ -18,9 +18,7 @@ class ApiService {
   
   // Get authentication token
   Future<String?> getToken() async {
-    final token = await _secureStorage.read(key: 'auth_token');
-    debugPrint('getToken: token=$token');
-    return token;
+    return await _secureStorage.read(key: 'auth_token');
   }
   
   // Save authentication token
@@ -151,7 +149,7 @@ class ApiService {
     };
     
     print('Attempting login with email: $email');
-    final response = await post('auth/login', data, requiresAuth: false);
+    final response = await post('api/auth/login', data, requiresAuth: false);
     print('Login response: $response');
     
     if (response['token'] != null) {
@@ -172,7 +170,7 @@ class ApiService {
       'name': name,
     };
     
-    final response = await post('auth/register', data, requiresAuth: false);
+    final response = await post('api/auth/register', data, requiresAuth: false);
     if (response['token'] != null) {
       await saveToken(response['token']);
     }
@@ -182,7 +180,7 @@ class ApiService {
   
   // Item methods
   Future<List<dynamic>> getItems() async {
-    final response = await get('items');
+    final response = await get('api/items');
     // If the backend returns { items: [...] }, extract the list
     if (response is Map<String, dynamic> && response.containsKey('items')) {
       return response['items'] as List<dynamic>;
@@ -196,20 +194,20 @@ class ApiService {
   }
   
   Future<Map<String, dynamic>> getItemDetails(String itemId) async {
-    return await get('items/$itemId');
+    return await get('api/items/$itemId');
   }
   
   Future<Map<String, dynamic>> createItem(Map<String, dynamic> itemData) async {
-    return await post('items', itemData);
+    return await post('api/items', itemData);
   }
   
   Future<Map<String, dynamic>> updateItem(String itemId, Map<String, dynamic> itemData) async {
-    return await put('items/$itemId', itemData);
+    return await put('api/items/$itemId', itemData);
   }
   
   Future<void> deleteItem(String itemId) async {
     try {
-      final response = await delete('items/$itemId');
+      final response = await delete('api/items/$itemId');
       debugPrint('Delete response: $response');
       // The response might be null for successful deletes
       return;
@@ -239,7 +237,7 @@ class ApiService {
   
   // Upload image to backend (which uploads to S3)
   Future<String> uploadImage(File imageFile) async {
-    final uri = Uri.parse('${Env.apiUrl}/items/upload-image');
+    final uri = Uri.parse('$baseUrl/api/items/upload-image');
     final request = http.MultipartRequest('POST', uri);
     request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
     // Add auth header if needed
@@ -256,6 +254,13 @@ class ApiService {
     } else {
       throw ApiException(statusCode: response.statusCode, message: response.body);
     }
+  }
+  
+  // Add this method if not present, or update any usage to use the correct endpoint
+  Future<bool> validateToken() async {
+    final response = await get('api/auth/validate');
+    // You may want to check the response structure here
+    return response != null && response['valid'] == true;
   }
 }
 
