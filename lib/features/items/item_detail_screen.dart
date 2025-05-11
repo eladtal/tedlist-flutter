@@ -10,6 +10,7 @@ import '../../services/event_service.dart';
 import '../../providers/item_provider.dart';
 import '../../config/routes.dart';
 import 'home_screen.dart';
+import '../../widgets/web_scaffold.dart';
 
 String getProxyImageUrl(dynamic imageUrl) {
   if (imageUrl == null || imageUrl == '') return '';
@@ -60,157 +61,159 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image gallery
-            if (imageUrl.isNotEmpty)
-              SizedBox(
-                height: 300,
-                width: double.infinity,
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.error),
+      body: WebScaffold(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image gallery
+              if (imageUrl.isNotEmpty)
+                SizedBox(
+                  height: 300,
+                  width: double.infinity,
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[300],
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.error),
+                    ),
                   ),
                 ),
-              ),
-              
-            // Item details
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title and condition
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.item['title'] ?? 'No Title',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                      ),
-                      if (widget.item['condition'] != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            widget.item['condition'],
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSecondary,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Category
-                  if (widget.item['category'] != null) ...[
-                    Text(
-                      'Category',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.item['category'],
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  
-                  // Description
-                  Text(
-                    'Description',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.item['description'] ?? 'No description provided',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Owner info if available
-                  if (widget.item['owner'] != null && widget.item['owner'] is Map) ...[
-                    Text(
-                      'Owner',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                
+              // Item details
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title and condition
                     Row(
                       children: [
-                        CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
+                        Expanded(
                           child: Text(
-                            (widget.item['owner']['name'] as String?)?.isNotEmpty == true
-                                ? (widget.item['owner']['name'] as String).substring(0, 1).toUpperCase()
-                                : '?',
-                            style: const TextStyle(color: Colors.white),
+                            widget.item['title'] ?? 'No Title',
+                            style: Theme.of(context).textTheme.headlineMedium,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          (widget.item['owner']['name'] as String?) ?? 'Unknown User',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
+                        if (widget.item['condition'] != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              widget.item['condition'],
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSecondary,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
+                    
                     const SizedBox(height: 16),
-                  ],
-                  
-                  // Status
-                  if (widget.item['status'] != null) ...[
+                    
+                    // Category
+                    if (widget.item['category'] != null) ...[
+                      Text(
+                        'Category',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.item['category'],
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    
+                    // Description
                     Text(
-                      'Status',
+                      'Description',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: Colors.grey[600],
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(widget.item['status']).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        widget.item['status'],
-                        style: TextStyle(
-                          color: _getStatusColor(widget.item['status']),
+                    Text(
+                      widget.item['description'] ?? 'No description provided',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Owner info if available
+                    if (widget.item['owner'] != null && widget.item['owner'] is Map) ...[
+                      Text(
+                        'Owner',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.grey[600],
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            child: Text(
+                              (widget.item['owner']['name'] as String?)?.isNotEmpty == true
+                                  ? (widget.item['owner']['name'] as String).substring(0, 1).toUpperCase()
+                                  : '?',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            (widget.item['owner']['name'] as String?) ?? 'Unknown User',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    
+                    // Status
+                    if (widget.item['status'] != null) ...[
+                      Text(
+                        'Status',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(widget.item['status']).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          widget.item['status'],
+                          style: TextStyle(
+                            color: _getStatusColor(widget.item['status']),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

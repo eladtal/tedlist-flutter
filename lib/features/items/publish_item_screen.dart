@@ -185,95 +185,100 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Publish Item')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Title'),
-                validator: (v) => v == null || v.isEmpty ? 'Enter a title' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 3,
-                validator: (v) => v == null || v.isEmpty ? 'Enter a description' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _brandController,
-                decoration: const InputDecoration(labelText: 'Brand'),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _estimatedValueController,
-                decoration: const InputDecoration(labelText: 'Estimated Value'),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _category,
-                items: const [
-                  DropdownMenuItem<String>(value: 'Electronics', child: Text('Electronics')),
-                  DropdownMenuItem<String>(value: 'Furniture', child: Text('Furniture')),
-                  DropdownMenuItem<String>(value: 'Clothing', child: Text('Clothing')),
-                  DropdownMenuItem<String>(value: 'Books', child: Text('Books')),
-                  DropdownMenuItem<String>(value: 'Sports', child: Text('Sports')),
-                  DropdownMenuItem<String>(value: 'Other', child: Text('Other')),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 600),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(labelText: 'Title'),
+                    validator: (v) => v == null || v.isEmpty ? 'Enter a title' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(labelText: 'Description'),
+                    maxLines: 3,
+                    validator: (v) => v == null || v.isEmpty ? 'Enter a description' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _brandController,
+                    decoration: const InputDecoration(labelText: 'Brand'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _estimatedValueController,
+                    decoration: const InputDecoration(labelText: 'Estimated Value'),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _category,
+                    items: const [
+                      DropdownMenuItem<String>(value: 'Electronics', child: Text('Electronics')),
+                      DropdownMenuItem<String>(value: 'Furniture', child: Text('Furniture')),
+                      DropdownMenuItem<String>(value: 'Clothing', child: Text('Clothing')),
+                      DropdownMenuItem<String>(value: 'Books', child: Text('Books')),
+                      DropdownMenuItem<String>(value: 'Sports', child: Text('Sports')),
+                      DropdownMenuItem<String>(value: 'Other', child: Text('Other')),
+                    ],
+                    onChanged: (v) => setState(() => _category = v ?? 'Other'),
+                    decoration: const InputDecoration(labelText: 'Category'),
+                    validator: (v) => v == null ? 'Select a category' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _condition,
+                    items: const [
+                      DropdownMenuItem<String>(value: 'New', child: Text('New')),
+                      DropdownMenuItem<String>(value: 'Like New', child: Text('Like New')),
+                      DropdownMenuItem<String>(value: 'Good', child: Text('Good')),
+                      DropdownMenuItem<String>(value: 'Fair', child: Text('Fair')),
+                      DropdownMenuItem<String>(value: 'Poor', child: Text('Poor')),
+                    ],
+                    onChanged: (v) => setState(() => _condition = v ?? 'Good'),
+                    decoration: const InputDecoration(labelText: 'Condition'),
+                    validator: (v) => v == null ? 'Select a condition' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _pickImage,
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Select Image'),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Max file size: 5MB', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  if (_imageError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(_imageError!, style: TextStyle(color: Colors.red, fontSize: 13)),
+                    ),
+                  const SizedBox(height: 12),
+                  if (kIsWeb && _selectedImageBytes != null)
+                    Image.memory(_selectedImageBytes!, height: 200, fit: BoxFit.cover)
+                  else if (!kIsWeb && _selectedImage != null)
+                    Image.file(_selectedImage!, height: 200, fit: BoxFit.cover),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _isAnalyzing ? null : _analyzeImage,
+                    child: _isAnalyzing 
+                        ? const CircularProgressIndicator()
+                        : const Text('Analyze Image'),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _isAnalyzing ? null : _submit,
+                    child: _isAnalyzing ? const CircularProgressIndicator() : const Text('Publish'),
+                  ),
                 ],
-                onChanged: (v) => setState(() => _category = v ?? 'Other'),
-                decoration: const InputDecoration(labelText: 'Category'),
-                validator: (v) => v == null ? 'Select a category' : null,
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _condition,
-                items: const [
-                  DropdownMenuItem<String>(value: 'New', child: Text('New')),
-                  DropdownMenuItem<String>(value: 'Like New', child: Text('Like New')),
-                  DropdownMenuItem<String>(value: 'Good', child: Text('Good')),
-                  DropdownMenuItem<String>(value: 'Fair', child: Text('Fair')),
-                  DropdownMenuItem<String>(value: 'Poor', child: Text('Poor')),
-                ],
-                onChanged: (v) => setState(() => _condition = v ?? 'Good'),
-                decoration: const InputDecoration(labelText: 'Condition'),
-                validator: (v) => v == null ? 'Select a condition' : null,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _pickImage,
-                icon: const Icon(Icons.photo_library),
-                label: const Text('Select Image'),
-              ),
-              const SizedBox(height: 4),
-              Text('Max file size: 5MB', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              if (_imageError != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(_imageError!, style: TextStyle(color: Colors.red, fontSize: 13)),
-                ),
-              const SizedBox(height: 12),
-              if (kIsWeb && _selectedImageBytes != null)
-                Image.memory(_selectedImageBytes!, height: 200, fit: BoxFit.cover)
-              else if (!kIsWeb && _selectedImage != null)
-                Image.file(_selectedImage!, height: 200, fit: BoxFit.cover),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _isAnalyzing ? null : _analyzeImage,
-                child: _isAnalyzing 
-                    ? const CircularProgressIndicator()
-                    : const Text('Analyze Image'),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isAnalyzing ? null : _submit,
-                child: _isAnalyzing ? const CircularProgressIndicator() : const Text('Publish'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
