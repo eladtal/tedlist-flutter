@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/env.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
+import 'dart:typed_data';
 
 class ApiService {
   // Base URL from environment configuration
@@ -240,6 +241,29 @@ class ApiService {
     final uri = Uri.parse('$baseUrl/api/items/upload-image');
     final request = http.MultipartRequest('POST', uri);
     request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+    // Add auth header if needed
+    final token = await getToken();
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final body = json.decode(response.body);
+      // Expecting { success: true, data: { imageUrl: 'https://...' } }
+      return body['data']['imageUrl'] as String;
+    } else {
+      throw ApiException(statusCode: response.statusCode, message: response.body);
+    }
+  }
+  
+  // Upload image bytes to backend (for web)
+  Future<String> uploadImageBytes(Uint8List imageBytes) async {
+    final uri = Uri.parse('$baseUrl/api/items/upload-image');
+    final request = http.MultipartRequest('POST', uri);
+    request.files.add(
+      http.MultipartFile.fromBytes('image', imageBytes, filename: 'upload.png'),
+    );
     // Add auth header if needed
     final token = await getToken();
     if (token != null) {

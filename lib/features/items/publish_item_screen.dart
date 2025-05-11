@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../services/api_service.dart';
 import '../../services/vision_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PublishItemScreen extends ConsumerStatefulWidget {
   const PublishItemScreen({super.key});
@@ -22,12 +24,15 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
   final _estimatedValueController = TextEditingController();
   
   File? _selectedImage;
+  Uint8List? _selectedImageBytes; // For web
   String _category = 'Other';
   String _condition = 'Good';
   List<String> _keywords = [];
   bool _isAnalyzing = false;
   String _loadingMessage = "Teaching AI to appreciate your item's beauty...";
   Timer? _loadingMessageTimer;
+  String? _imageError;
+  static const int maxFileSize = 5 * 1024 * 1024; // 5MB
 
   @override
   void dispose() {
@@ -40,29 +45,53 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
   }
 
   Future<void> _pickImage() async {
+    setState(() { _imageError = null; });
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    
     if (image != null) {
-      setState(() {
-        _selectedImage = File(image.path);
-      });
+      if (kIsWeb) {
+        final bytes = await image.readAsBytes();
+        if (bytes.length > maxFileSize) {
+          setState(() {
+            _imageError = 'Image is too large. Max file size is 5MB.';
+            _selectedImageBytes = null;
+            _selectedImage = null;
+          });
+          return;
+        }
+        setState(() {
+          _selectedImageBytes = bytes;
+          _selectedImage = null;
+        });
+      } else {
+        final file = File(image.path);
+        if (await file.length() > maxFileSize) {
+          setState(() {
+            _imageError = 'Image is too large. Max file size is 5MB.';
+            _selectedImage = null;
+            _selectedImageBytes = null;
+          });
+          return;
+        }
+        setState(() {
+          _selectedImage = file;
+          _selectedImageBytes = null;
+        });
+      }
     }
   }
 
   Future<void> _analyzeImage() async {
-    if (_selectedImage == null) return;
+    if (kIsWeb && _selectedImageBytes == null) return;
+    if (!kIsWeb && _selectedImage == null) return;
 
     final visionService = ref.read(visionServiceProvider);
     debugPrint('Starting image analysis...');
-    
     setState(() {
       _isAnalyzing = true;
       _loadingMessage = visionService.getNextLoadingMessage();
     });
     debugPrint('Initial loading message: $_loadingMessage');
-
-    // Start a timer to update the loading message every 2 seconds
     _loadingMessageTimer?.cancel();
     _loadingMessageTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (_isAnalyzing && mounted) {
@@ -74,10 +103,15 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
         timer.cancel();
       }
     });
-
     try {
-      final result = await visionService.analyzeImage(_selectedImage!);
-      
+      Map<String, dynamic> result;
+      if (kIsWeb && _selectedImageBytes != null) {
+        result = await visionService.analyzeImageBytes(_selectedImageBytes!);
+      } else if (!kIsWeb && _selectedImage != null) {
+        result = await visionService.analyzeImage(_selectedImage!);
+      } else {
+        throw Exception('No image selected');
+      }
       if (result['success'] == true && result['data'] != null) {
         final data = result['data'];
         setState(() {
@@ -109,12 +143,17 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _selectedImage == null) return;
+    if (!_formKey.currentState!.validate() || (_selectedImage == null && _selectedImageBytes == null)) return;
     setState(() => _isAnalyzing = true);
     try {
-      // 1. Upload image to backend (which uploads to S3)
-      final url = await ApiService().uploadImage(_selectedImage!);
-      // 2. Submit item details to backend
+      String url;
+      if (kIsWeb && _selectedImageBytes != null) {
+        url = await ApiService().uploadImageBytes(_selectedImageBytes!);
+      } else if (_selectedImage != null) {
+        url = await ApiService().uploadImage(_selectedImage!);
+      } else {
+        throw Exception('No image selected');
+      }
       await ApiService().createItem({
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -125,18 +164,12 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
         'estimatedValue': _estimatedValueController.text.trim(),
         'keywords': _keywords,
       });
-      
       if (!mounted) return;
-      
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Item published!')),
       );
-      
-      // Use GoRouter to navigate back to home
       if (!mounted) return;
       context.go('/');
-      
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -216,8 +249,17 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
                 icon: const Icon(Icons.photo_library),
                 label: const Text('Select Image'),
               ),
+              const SizedBox(height: 4),
+              Text('Max file size: 5MB', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              if (_imageError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Text(_imageError!, style: TextStyle(color: Colors.red, fontSize: 13)),
+                ),
               const SizedBox(height: 12),
-              if (_selectedImage != null)
+              if (kIsWeb && _selectedImageBytes != null)
+                Image.memory(_selectedImageBytes!, height: 200, fit: BoxFit.cover)
+              else if (!kIsWeb && _selectedImage != null)
                 Image.file(_selectedImage!, height: 200, fit: BoxFit.cover),
               const SizedBox(height: 16),
               ElevatedButton(

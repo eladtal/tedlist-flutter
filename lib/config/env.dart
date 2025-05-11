@@ -1,3 +1,3 @@
 class Env {
-  static const String apiUrl = 'https://tedlist-backend.onrender.com';
+  static const String apiUrl = 'http://localhost:8000';
 } 

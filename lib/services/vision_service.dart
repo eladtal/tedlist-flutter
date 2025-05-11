@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../config/env.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_service.dart';
+import 'dart:typed_data';
 
 final visionServiceProvider = Provider<VisionService>((ref) {
   final apiService = ref.watch(apiServiceProvider);
@@ -96,6 +97,47 @@ class VisionService {
       }
     } catch (e) {
       throw Exception('Error analyzing image: $e');
+    }
+  }
+
+  /// Analyze image bytes using OpenAI Vision API (for web)
+  Future<Map<String, dynamic>> analyzeImageBytes(Uint8List imageBytes) async {
+    debugPrint('Starting image analysis with OpenAI (web bytes)');
+    try {
+      final uri = Uri.parse('$baseUrl/api/vision/openai/analyze');
+      final request = http.MultipartRequest('POST', uri);
+      request.files.add(
+        http.MultipartFile.fromBytes('image', imageBytes, filename: 'upload.png'),
+      );
+      // Add auth if needed
+      final token = await _apiService.getToken();
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      debugPrint('Response status code: \\${response.statusCode}');
+      debugPrint('Response body: \\${response.body}');
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        debugPrint('OpenAI Vision analysis successful (web)');
+        final body = json.decode(response.body);
+        return {
+          'success': true,
+          'data': body['data'] ?? body,
+        };
+      } else {
+        debugPrint('Error response: \\${response.body}');
+        return {
+          'success': false,
+          'error': 'Failed to analyze image: \\${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      debugPrint('Exception during image analysis (web): $e');
+      return {
+        'success': false,
+        'error': 'Error analyzing image: $e',
+      };
     }
   }
 } 
