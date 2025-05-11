@@ -30,19 +30,16 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   StreamSubscription? _eventSubscription;
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
-    // Register the observer
     WidgetsBinding.instance.addObserver(this);
-    
-    // Schedule provider refresh for after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(itemsProvider.notifier).loadItems();
+      _fetchCurrentUserId();
     });
-    
-    // Subscribe to global events
     _eventSubscription = eventService.onEvent.listen((event) {
       debugPrint('🎯 Received event in HomeScreen: ${event.event} with data: ${event.data}');
       
@@ -108,6 +105,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     }
   }
 
+  Future<void> _fetchCurrentUserId() async {
+    try {
+      final response = await ApiService().get('api/auth/validate');
+      if (mounted) {
+        setState(() {
+          _currentUserId = response['_id'] ?? response['id'] ?? response['user']?['_id'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch current user id: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -133,12 +143,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             if (items.isEmpty) {
               return const Center(child: Text('No items found.'));
             }
+            final myItems = _currentUserId == null
+                ? []
+                : items.where((item) => item['owner']?['_id'] == _currentUserId).toList();
+            final featuredItems = _currentUserId == null
+                ? items
+                : items.where((item) => item['owner']?['_id'] != _currentUserId).toList();
             return RefreshIndicator(
               onRefresh: () async {
                 await ref.read(itemsProvider.notifier).loadItems();
+                await _fetchCurrentUserId();
               },
               child: CustomScrollView(
                 slivers: [
+                  // My Items Section
+                  if (myItems.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'My Items',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 220,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: myItems.length,
+                                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                                itemBuilder: (context, index) {
+                                  final item = myItems[index];
+                                  return SizedBox(
+                                    width: 180,
+                                    child: _buildItemCard(item),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   // Categories
                   SliverToBoxAdapter(
                     child: Padding(
@@ -169,7 +218,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       ),
                     ),
                   ),
-                  
                   // Featured Items
                   SliverToBoxAdapter(
                     child: Padding(
@@ -180,8 +228,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       ),
                     ),
                   ),
-                  
-                  // Items Grid
+                  // Items Grid (featured)
                   SliverPadding(
                     padding: const EdgeInsets.all(16.0),
                     sliver: SliverGrid(
@@ -193,10 +240,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final item = items[index];
+                          final item = featuredItems[index];
                           return _buildItemCard(item);
                         },
-                        childCount: items.length,
+                        childCount: featuredItems.length,
                       ),
                     ),
                   ),
