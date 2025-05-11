@@ -2,6 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/api_service.dart';
+import '../../config/env.dart';
+
+String getProxyImageUrl(dynamic imageUrl) {
+  if (imageUrl == null || imageUrl == '') return '';
+  final apiBase = Env.apiUrl.replaceAll('/api', '');
+  // If already a full URL and not our proxy, use as is
+  if (imageUrl is String && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+    final uri = Uri.parse(imageUrl);
+    if (!uri.path.contains('/api/images/')) {
+      // Try to extract filename
+      final filename = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
+      if (filename.isNotEmpty) {
+        return '{apiBase}/api/images/$filename';
+      }
+      return imageUrl;
+    }
+    return imageUrl;
+  }
+  // If it's a filename or relative path
+  String filename = imageUrl.toString().split('/').last;
+  return '{apiBase}/api/images/$filename';
+}
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -148,6 +170,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildItemCard(Map<String, dynamic> item) {
+    final imageUrl = getProxyImageUrl(item['image']);
     return GestureDetector(
       onTap: () {
         // TODO: Navigate to item detail screen
@@ -160,7 +183,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // Item Image
             Expanded(
               child: CachedNetworkImage(
-                imageUrl: item['image'] ?? '',
+                imageUrl: imageUrl,
                 fit: BoxFit.cover,
                 width: double.infinity,
                 placeholder: (context, url) => Container(
