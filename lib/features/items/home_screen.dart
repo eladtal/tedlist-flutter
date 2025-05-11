@@ -7,22 +7,12 @@ import '../../config/env.dart';
 String getProxyImageUrl(dynamic imageUrl) {
   if (imageUrl == null || imageUrl == '') return '';
   final apiBase = Env.apiUrl.replaceAll('/api', '');
-  // If already a full URL and not our proxy, use as is
   if (imageUrl is String && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-    final uri = Uri.parse(imageUrl);
-    if (!uri.path.contains('/api/images/')) {
-      // Try to extract filename
-      final filename = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
-      if (filename.isNotEmpty) {
-        return '{apiBase}/api/images/$filename';
-      }
-      return imageUrl;
-    }
-    return imageUrl;
+    return imageUrl; // Use as-is if already a full URL
   }
   // If it's a filename or relative path
   String filename = imageUrl.toString().split('/').last;
-  return '{apiBase}/api/images/$filename';
+  return '$apiBase/api/images/$filename';
 }
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -170,7 +160,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildItemCard(Map<String, dynamic> item) {
-    final imageUrl = getProxyImageUrl(item['image']);
+    final imageUrl = getProxyImageUrl(
+      (item['images'] is List && item['images'].isNotEmpty) ? item['images'][0] : null
+    );
+    // Debug: Print the image URLs for inspection
+    debugPrint('Item: \\${item['title'] ?? item['id']}');
+    debugPrint('  images: \\${item['images']}');
+    debugPrint('  imageUrl used: \\${imageUrl}');
     return GestureDetector(
       onTap: () {
         // TODO: Navigate to item detail screen
