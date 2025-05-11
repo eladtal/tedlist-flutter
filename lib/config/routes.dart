@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/login_screen.dart';
 import '../features/items/home_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/items/publish_item_screen.dart';
 
 // Router provider
 final routerProvider = Provider<GoRouter>((ref) {
@@ -26,6 +27,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/',
             name: 'home',
             builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/publish',
+            name: 'publish',
+            builder: (context, state) => const PublishItemScreen(),
           ),
           GoRoute(
             path: '/profile',
@@ -71,6 +77,9 @@ class ScaffoldWithBottomNav extends StatelessWidget {
               context.go('/');
               break;
             case 1:
+              context.go('/publish');
+              break;
+            case 2:
               context.go('/profile');
               break;
           }
@@ -81,6 +90,11 @@ class ScaffoldWithBottomNav extends StatelessWidget {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.add_circle_outline, size: 32),
+            selectedIcon: Icon(Icons.add_circle, size: 32),
+            label: 'Publish',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -94,7 +108,8 @@ class ScaffoldWithBottomNav extends StatelessWidget {
 
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
-    if (location.startsWith('/profile')) return 1;
+    if (location.startsWith('/publish')) return 1;
+    if (location.startsWith('/profile')) return 2;
     return 0;
   }
 } 

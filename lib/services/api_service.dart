@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/env.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:io';
 
 class ApiService {
   // Base URL from environment configuration
@@ -60,7 +61,7 @@ class ApiService {
   // GET request
   Future<dynamic> get(String endpoint, {bool requiresAuth = true}) async {
     final headers = await _getHeaders(requiresAuth: requiresAuth);
-    final url = '$baseUrl/api/$endpoint';
+    final url = '${baseUrl}/$endpoint';
     print('GET request to: $url');
     
     final response = await http.get(
@@ -74,7 +75,7 @@ class ApiService {
   // POST request
   Future<dynamic> post(String endpoint, dynamic data, {bool requiresAuth = true}) async {
     final headers = await _getHeaders(requiresAuth: requiresAuth);
-    final url = '$baseUrl/api/$endpoint';
+    final url = '${baseUrl}/$endpoint';
     print('POST request to: $url');
     print('Request data: ${json.encode(data)}');
     
@@ -90,7 +91,7 @@ class ApiService {
   // PUT request
   Future<dynamic> put(String endpoint, dynamic data, {bool requiresAuth = true}) async {
     final headers = await _getHeaders(requiresAuth: requiresAuth);
-    final url = '$baseUrl/api/$endpoint';
+    final url = '${baseUrl}/$endpoint';
     print('PUT request to: $url');
     
     final response = await http.put(
@@ -105,7 +106,7 @@ class ApiService {
   // DELETE request
   Future<dynamic> delete(String endpoint, {bool requiresAuth = true}) async {
     final headers = await _getHeaders(requiresAuth: requiresAuth);
-    final url = '$baseUrl/api/$endpoint';
+    final url = '${baseUrl}/$endpoint';
     print('DELETE request to: $url');
     
     final response = await http.delete(
@@ -216,6 +217,27 @@ class ApiService {
   
   Future<Map<String, dynamic>> respondToTradeOffer(String tradeId, String status) async {
     return await put('trades/$tradeId/status', {'status': status});
+  }
+  
+  // Upload image to backend (which uploads to S3)
+  Future<String> uploadImage(File imageFile) async {
+    final uri = Uri.parse('${Env.apiUrl}/items/upload-image');
+    final request = http.MultipartRequest('POST', uri);
+    request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+    // Add auth header if needed
+    final token = await getToken();
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final body = json.decode(response.body);
+      // Expecting { success: true, data: { imageUrl: 'https://...' } }
+      return body['data']['imageUrl'] as String;
+    } else {
+      throw ApiException(statusCode: response.statusCode, message: response.body);
+    }
   }
 }
 
