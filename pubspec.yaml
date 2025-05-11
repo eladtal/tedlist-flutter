@@ -30,17 +30,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  flutter_riverpod: any
+  go_router: any
+  cached_network_image: any
+  flutter_secure_storage: any
+  http: any
+  local_auth: ^2.3.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
-  http: ^1.2.2
-  flutter_riverpod: ^2.6.1
-  go_router: ^14.6.2
-  flutter_secure_storage: ^9.2.4
   shared_preferences: ^2.2.3
-  cached_network_image: ^3.4.0
   image_picker: ^1.1.2
 
 dev_dependencies:

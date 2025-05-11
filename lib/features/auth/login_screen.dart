@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/api_service.dart';
+import '../../services/biometric_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -15,13 +16,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _showBiometric = false;
   final _apiService = ApiService();
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _checkBiometricEnabled();
+  }
+
+  Future<void> _checkBiometricEnabled() async {
+    final enabled = await BiometricService.isBiometricEnabled();
+    setState(() {
+      _showBiometric = enabled;
+    });
   }
 
   Future<void> _login() async {
@@ -38,7 +46,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
       
       if (!mounted) return;
-      
+      await _maybePromptEnableBiometrics();
       // Navigate to home screen on successful login
       context.go('/');
     } on ApiException catch (e) {
@@ -59,6 +67,81 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loginWithBiometrics() async {
+    setState(() => _isLoading = true);
+    try {
+      debugPrint('Attempting biometric authentication...');
+      String errorMsg = '';
+      bool authenticated = false;
+      try {
+        authenticated = await BiometricService.authenticate();
+        debugPrint('Biometric authenticate() result: $authenticated');
+      } catch (e) {
+        errorMsg = e.toString();
+        debugPrint('Biometric authenticate() error: $errorMsg');
+      }
+      if (!authenticated) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Biometric authentication failed. $errorMsg')),
+          );
+        }
+        return;
+      }
+      // Check if token exists
+      final token = await _apiService.getToken();
+      debugPrint('Token found: $token');
+      if (token != null) {
+        if (mounted) {
+          context.go('/');
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No saved session found. Please login with email and password.')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _maybePromptEnableBiometrics() async {
+    final alreadyEnabled = await BiometricService.isBiometricEnabled();
+    final available = await BiometricService.isBiometricAvailable();
+    if (!alreadyEnabled && available) {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Enable Fingerprint Login?'),
+          content: const Text('Would you like to enable fingerprint login for next time?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Yes'),
+            ),
+          ],
+        ),
+      );
+      if (result == true) {
+        await BiometricService.setBiometricEnabled(true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Fingerprint login enabled!')),
+          );
+        }
+        setState(() {
+          _showBiometric = true;
         });
       }
     }
@@ -149,6 +232,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         )
                       : const Text('Log In'),
                 ),
+                if (_showBiometric) ...[
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _loginWithBiometrics,
+                    icon: const Icon(Icons.fingerprint),
+                    label: const Text('Login with Fingerprint'),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 
                 // Register link
