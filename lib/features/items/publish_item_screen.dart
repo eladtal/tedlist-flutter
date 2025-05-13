@@ -81,6 +81,27 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
     }
   }
 
+  Future<void> _takePhoto() async {
+    setState(() { _imageError = null; });
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      final file = File(image.path);
+      if (await file.length() > maxFileSize) {
+        setState(() {
+          _imageError = 'Image is too large. Max file size is 5MB.';
+          _selectedImage = null;
+          _selectedImageBytes = null;
+        });
+        return;
+      }
+      setState(() {
+        _selectedImage = file;
+        _selectedImageBytes = null;
+      });
+    }
+  }
+
   Future<void> _analyzeImage() async {
     if (kIsWeb && _selectedImageBytes == null) return;
     if (!kIsWeb && _selectedImage == null) return;
@@ -247,11 +268,32 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
                     validator: (v) => v == null ? 'Select a condition' : null,
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text('Select Image'),
-                  ),
+                  if (kIsWeb)
+                    ElevatedButton.icon(
+                      onPressed: _pickImage,
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Select Image'),
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _pickImage,
+                            icon: const Icon(Icons.photo_library),
+                            label: const Text('Select Image'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _takePhoto,
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Take Photo'),
+                          ),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 4),
                   Text('Max file size: 5MB', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   if (_imageError != null)
