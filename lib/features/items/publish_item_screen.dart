@@ -243,24 +243,36 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
                             label: const Text('Select Image'),
                           )
                         else
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: _pickImage,
-                                  icon: const Icon(Icons.photo_library),
-                                  label: const Text('Select Image'),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _pickImage,
+                                    icon: const Icon(Icons.photo_library),
+                                    label: const Text('Select Image'),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: _takePhoto,
-                                  icon: const Icon(Icons.camera_alt),
-                                  label: const Text('Take Photo'),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _takePhoto,
+                                    icon: const Icon(Icons.camera_alt),
+                                    label: const Text('Take Photo'),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         const SizedBox(height: 4),
                         Text('Max file size: 5MB', style: TextStyle(fontSize: 12, color: Colors.grey[600])),

@@ -12,6 +12,9 @@ import '../../widgets/swipeable_item_card.dart';
 import 'package:flutter/gestures.dart';
 import '../trading/trading_screen.dart';
 import '../items/my_items_screen.dart';
+import 'dart:math' as math;
+import 'package:flutter/animation.dart';
+import 'package:flutter/services.dart';
 
 String getProxyImageUrl(dynamic imageUrl) {
   if (imageUrl == null || imageUrl == '') return '';
@@ -31,9 +34,11 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   StreamSubscription? _eventSubscription;
   String? _currentUserId;
+  late AnimationController _tradeBtnController;
+  late Animation<double> _scaleAnim;
 
   @override
   void initState() {
@@ -78,6 +83,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         }
       }
     });
+    _tradeBtnController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    _scaleAnim = Tween<double>(begin: 1.0, end: 1.12).animate(
+      CurvedAnimation(parent: _tradeBtnController, curve: Curves.easeInOut),
+    );
   }
   
   @override
@@ -86,6 +98,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     WidgetsBinding.instance.removeObserver(this);
     // Cancel event subscription
     _eventSubscription?.cancel();
+    _tradeBtnController.dispose();
     super.dispose();
   }
   
@@ -127,121 +140,122 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     final itemsAsync = ref.watch(itemsProvider);
 
     return Scaffold(
-      body: WebScaffold(
-        header: AppBar(
-          title: const Text('Tedlist'),
-          backgroundColor: Theme.of(context).colorScheme.background,
-          elevation: 0,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                // TODO: Navigate to notifications screen
-              },
+      body: Stack(
+        children: [
+          WebScaffold(
+            header: AppBar(
+              title: const Text('Tedlist'),
+              backgroundColor: Theme.of(context).colorScheme.background,
+              elevation: 0,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    // TODO: Navigate to notifications screen
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
-        content: itemsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => Center(child: Text('Error: $error')),
-          data: (items) {
-            if (items.isEmpty) {
-              return const Center(child: Text('No items found.'));
-            }
-            final featuredItems = _currentUserId == null
-                ? items
-                : items.where((item) => item['owner']?['_id'] != _currentUserId).toList();
-            return RefreshIndicator(
-              onRefresh: () async {
-                await ref.read(itemsProvider.notifier).loadItems();
-                await _fetchCurrentUserId();
-              },
-              child: CustomScrollView(
-                slivers: [
-                  // Categories
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Categories',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 100,
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              children: [
-                                _buildCategoryItem(Icons.devices, 'Electronics'),
-                                _buildCategoryItem(Icons.sports, 'Sports'),
-                                _buildCategoryItem(Icons.book, 'Books'),
-                                _buildCategoryItem(Icons.checkroom, 'Clothing'),
-                                _buildCategoryItem(Icons.videogame_asset, 'Games'),
-                                _buildCategoryItem(Icons.palette, 'Art'),
-                              ],
+            content: itemsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text('Error: $error')),
+              data: (items) {
+                if (items.isEmpty) {
+                  return const Center(child: Text('No items found.'));
+                }
+                final featuredItems = _currentUserId == null
+                    ? items
+                    : items.where((item) => item['owner']?['_id'] != _currentUserId).toList();
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    await ref.read(itemsProvider.notifier).loadItems();
+                    await _fetchCurrentUserId();
+                  },
+                  child: CustomScrollView(
+                    slivers: [
+                      // Featured Items
+                      if (false) ...[
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                            child: Text(
+                              'Featured Items',
+                              style: Theme.of(context).textTheme.titleLarge,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                        // Items Grid (featured)
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16.0),
+                          sliver: SliverGrid(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.75,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final item = featuredItems[index];
+                                return _buildItemCard(item);
+                              },
+                              childCount: featuredItems.length,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  // Featured Items
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: Text(
-                        'Featured Items',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                  ),
-                  // Items Grid (featured)
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16.0),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.75,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final item = featuredItems[index];
-                          return _buildItemCard(item);
-                        },
-                        childCount: featuredItems.length,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryItem(IconData icon, String name) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16.0),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
-            child: Icon(
-              icon,
-              color: Theme.of(context).colorScheme.primary,
-              size: 32,
+                );
+              },
             ),
           ),
-          const SizedBox(height: 8),
-          Text(name),
+          // Floating animated Trade button
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: false,
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _tradeBtnController,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _scaleAnim.value,
+                      child: GestureDetector(
+                        onTap: () {
+                          // Navigate to Choose Item to Trade page
+                          final items = ref.read(itemsProvider).maybeWhen(
+                            data: (items) => items,
+                            orElse: () => [],
+                          );
+                          final myItems = items.map((item) => Map<String, dynamic>.from(item)).toList();
+                          _showItemSelectionDialog(context, myItems);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFFF3B0).withOpacity(0.7),
+                                blurRadius: 48,
+                                spreadRadius: 16,
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/trade_button.png',
+                              width: 240,
+                              height: 240,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

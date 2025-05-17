@@ -42,7 +42,7 @@ class _TradingScreenState extends ConsumerState<TradingScreen> {
 
   Future<void> _loadPotentialItems() async {
     try {
-      final response = await ApiService().get('api/items/potential-trades/${widget.myItem['_id']}');
+      final response = await ApiService().get('items/potential-trades/${widget.myItem['_id']}');
       if (mounted) {
         setState(() {
           _potentialItems = List<Map<String, dynamic>>.from(response['items'] ?? []);
