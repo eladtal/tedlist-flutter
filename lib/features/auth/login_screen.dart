@@ -251,9 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           
                           // Register link
                           TextButton(
-                            onPressed: () {
-                              // TODO: Navigate to register screen when created
-                            },
+                            onPressed: () => context.go('/register'),
                             child: const Text('Don\'t have an account? Sign up'),
                           ),
                         ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/api_service.dart';
 import '../../widgets/web_scaffold.dart';
+import 'package:go_router/go_router.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -15,6 +16,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -22,11 +24,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+    debugPrint("Register button clicked - _register function started.");
+
+    final formState = _formKey.currentState;
+    if (formState == null) {
+      debugPrint("Form state is null. This should not happen.");
+      return;
+    }
+
+    final bool isValid = formState.validate();
+    debugPrint("Form validation result: $isValid");
+
+    if (!isValid) {
+      debugPrint("Form is NOT valid. Registration process stopped.");
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -44,7 +61,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed: $e')),
+          SnackBar(content: Text('Registration failed: ${e.toString()}')),
         );
       }
     } finally {
@@ -58,8 +75,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Register')),
+      resizeToAvoidBottomInset: true,
       body: WebScaffold(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
@@ -94,8 +112,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     border: OutlineInputBorder(),
                   ),
                   obscureText: true,
-                  validator: (value) =>
-                      value?.isEmpty ?? true ? 'Please enter a password' : null,
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter a password';
+                    }
+                    if (value!.length < 6) {
+                        return 'Password must be at least 6 characters';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  obscureText: true,
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please confirm your password';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -109,7 +152,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                  onPressed: () => context.go('/login'),
                   child: const Text('Already have an account? Login'),
                 ),
               ],

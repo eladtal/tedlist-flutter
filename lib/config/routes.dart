@@ -8,6 +8,7 @@ import '../features/items/publish_item_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
+import '../features/items/my_listings_screen.dart';
 
 // Static navigation class that can be called from anywhere
 class AppRouter {
@@ -29,6 +30,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        name: 'register',
+        builder: (context, state) => const RegisterScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {
@@ -66,6 +72,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/publish',
             name: 'publish',
             builder: (context, state) => const PublishItemScreen(),
+          ),
+          GoRoute(
+            path: '/my-listings',
+            name: 'myListings',
+            builder: (context, state) => const MyListingsScreen(),
           ),
           GoRoute(
             path: '/profile',
@@ -137,6 +148,9 @@ class ScaffoldWithBottomNav extends StatelessWidget {
               context.go('/publish');
               break;
             case 2:
+              context.go('/my-listings');
+              break;
+            case 3:
               context.go('/profile');
               break;
           }
@@ -154,6 +168,11 @@ class ScaffoldWithBottomNav extends StatelessWidget {
             label: 'Publish',
           ),
           NavigationDestination(
+            icon: Icon(Icons.list_alt_outlined),
+            selectedIcon: Icon(Icons.list_alt),
+            label: 'My Listings',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Profile',
@@ -166,7 +185,8 @@ class ScaffoldWithBottomNav extends StatelessWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/publish')) return 1;
-    if (location.startsWith('/profile')) return 2;
+    if (location.startsWith('/my-listings')) return 2;
+    if (location.startsWith('/profile')) return 3;
     return 0;
   }
 } 

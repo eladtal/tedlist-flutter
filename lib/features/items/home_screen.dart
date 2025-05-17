@@ -108,13 +108,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   Future<void> _fetchCurrentUserId() async {
     try {
       final response = await ApiService().get('api/auth/validate');
+      debugPrint('Auth response: $response');
       if (mounted) {
         setState(() {
-          _currentUserId = response['_id'] ?? response['id'] ?? response['user']?['_id'];
+          _currentUserId = response['email'] ?? response['user']?['email'];
         });
       }
     } catch (e) {
-      debugPrint('Failed to fetch current user id: $e');
+      debugPrint('Failed to fetch current user: $e');
     }
   }
 
@@ -143,12 +144,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             if (items.isEmpty) {
               return const Center(child: Text('No items found.'));
             }
-            final myItems = _currentUserId == null
-                ? []
-                : items.where((item) => item['owner']?['_id'] == _currentUserId).toList();
-            final featuredItems = _currentUserId == null
-                ? items
-                : items.where((item) => item['owner']?['_id'] != _currentUserId).toList();
+            
+            debugPrint('=== DEBUG INFO ===');
+            debugPrint('Current user email: $_currentUserId');
+            debugPrint('Total items: ${items.length}');
+            
+            // Print all items and their owners for debugging
+            for (var item in items) {
+              debugPrint('Item: ${item['title']} - Owner: ${item['owner']?['email']}');
+            }
+            
+            // Filter items: my items are from current user, featured items are from others
+            final List<Map<String, dynamic>> myItems;
+            final List<Map<String, dynamic>> featuredItems;
+
+            if (_currentUserId == null) {
+              // If user ID is not yet loaded, both lists should be empty to avoid miscategorization
+              myItems = [];
+              featuredItems = [];
+              debugPrint('Current user ID is null. MyItems and FeaturedItems are empty.');
+            } else {
+              debugPrint('Current user ID is $_currentUserId. Filtering items...');
+              myItems = items.where((item) {
+                final ownerEmail = item['owner']?['email']?.toString();
+                final isMyItem = ownerEmail != null && ownerEmail == _currentUserId.toString();
+                // Keep minimal debug for clarity
+                // debugPrint('MY ITEMS CHECK - Item: ${item['title']}, OwnerEmail: $ownerEmail, IsMyItem: $isMyItem');
+                return isMyItem;
+              }).cast<Map<String, dynamic>>().toList();
+                  
+              featuredItems = items.where((item) {
+                final ownerEmail = item['owner']?['email']?.toString();
+                final isFeaturedItem = ownerEmail != null && ownerEmail != _currentUserId.toString();
+                // Keep minimal debug for clarity
+                // debugPrint('FEATURED ITEMS CHECK - Item: ${item['title']}, OwnerEmail: $ownerEmail, IsFeaturedItem: $isFeaturedItem');
+                return isFeaturedItem;
+              }).cast<Map<String, dynamic>>().toList();
+            }
+            
+            debugPrint('=== FILTERING RESULTS ===');
+            debugPrint('My items count: ${myItems.length}');
+            debugPrint('Featured items count: ${featuredItems.length}');
+            if (myItems.isNotEmpty) {
+              debugPrint('First my item: ${myItems[0]['title']} - Owner: ${myItems[0]['owner']?['email']}');
+            }
+            if (featuredItems.isNotEmpty) {
+              debugPrint('First featured item: ${featuredItems[0]['title']} - Owner: ${featuredItems[0]['owner']?['email']}');
+            }
+            debugPrint('=== END DEBUG INFO ===');
+
             return RefreshIndicator(
               onRefresh: () async {
                 await ref.read(itemsProvider.notifier).loadItems();
@@ -156,6 +200,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
               },
               child: CustomScrollView(
                 slivers: [
+                  // Featured Items Section (from other users)
+                  if (featuredItems.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Featured Items',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 220,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: featuredItems.length,
+                                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                                itemBuilder: (context, index) {
+                                  final item = featuredItems[index];
+                                  return SizedBox(
+                                    width: 180,
+                                    child: _buildItemCard(item),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Categories
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Categories',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 100,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: [
+                                _buildCategoryItem(Icons.devices, 'Electronics'),
+                                _buildCategoryItem(Icons.sports, 'Sports'),
+                                _buildCategoryItem(Icons.book, 'Books'),
+                                _buildCategoryItem(Icons.checkroom, 'Clothing'),
+                                _buildCategoryItem(Icons.videogame_asset, 'Games'),
+                                _buildCategoryItem(Icons.palette, 'Art'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                   // My Items Section
                   if (myItems.isNotEmpty)
                     SliverToBoxAdapter(
@@ -188,65 +296,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                         ),
                       ),
                     ),
-                  // Categories
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Categories',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 100,
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              children: [
-                                _buildCategoryItem(Icons.devices, 'Electronics'),
-                                _buildCategoryItem(Icons.sports, 'Sports'),
-                                _buildCategoryItem(Icons.book, 'Books'),
-                                _buildCategoryItem(Icons.checkroom, 'Clothing'),
-                                _buildCategoryItem(Icons.videogame_asset, 'Games'),
-                                _buildCategoryItem(Icons.palette, 'Art'),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Featured Items
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: Text(
-                        'Featured Items',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                  ),
-                  // Items Grid (featured)
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16.0),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.75,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final item = featuredItems[index];
-                          return _buildItemCard(item);
-                        },
-                        childCount: featuredItems.length,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             );
