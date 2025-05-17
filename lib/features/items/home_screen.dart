@@ -124,19 +124,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     final itemsAsync = ref.watch(itemsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tedlist'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // TODO: Navigate to notifications screen
-            },
-          ),
-        ],
-      ),
       body: WebScaffold(
-        child: itemsAsync.when(
+        header: AppBar(
+          title: const Text('Tedlist'),
+          backgroundColor: Theme.of(context).colorScheme.background,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () {
+                // TODO: Navigate to notifications screen
+              },
+            ),
+          ],
+        ),
+        content: itemsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) => Center(child: Text('Error: $error')),
           data: (items) {

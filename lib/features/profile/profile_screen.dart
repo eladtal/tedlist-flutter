@@ -80,21 +80,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final theme = Theme.of(context);
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _isLoading ? null : _logout,
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : WebScaffold(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+              header: AppBar(
+                title: const Text('Tedlist'),
+                backgroundColor: Theme.of(context).colorScheme.background,
+                elevation: 0,
+                centerTitle: true,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.logout),
+                    onPressed: _isLoading ? null : _logout,
+                    tooltip: 'Logout',
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

@@ -52,17 +52,20 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
       : '';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.item['title'] ?? 'Item Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () => _showDeleteConfirmation(context),
-          ),
-        ],
-      ),
       body: WebScaffold(
-        child: SingleChildScrollView(
+        header: AppBar(
+          title: Text(widget.item['title'] ?? 'Item Details'),
+          backgroundColor: Theme.of(context).colorScheme.background,
+          elevation: 0,
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _showDeleteConfirmation(context),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -87,7 +90,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                 
               // Item details
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

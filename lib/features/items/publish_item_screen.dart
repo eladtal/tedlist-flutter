@@ -8,6 +8,7 @@ import '../../services/vision_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../../widgets/web_scaffold.dart';
 
 class PublishItemScreen extends ConsumerStatefulWidget {
   const PublishItemScreen({super.key});
@@ -214,211 +215,68 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Publish Item')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 600),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Step 1: Image Selection
-                  if (_currentStep == 0)
-                    Container(
-                      key: _stepKeys[0],
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (kIsWeb)
-                            ElevatedButton.icon(
-                              onPressed: _pickImage,
-                              icon: const Icon(Icons.photo_library),
-                              label: const Text('Select Image'),
-                            )
-                          else
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: _pickImage,
-                                    icon: const Icon(Icons.photo_library),
-                                    label: const Text('Select Image'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: _takePhoto,
-                                    icon: const Icon(Icons.camera_alt),
-                                    label: const Text('Take Photo'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          const SizedBox(height: 4),
-                          Text('Max file size: 5MB', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                          if (_imageError != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Text(_imageError!, style: TextStyle(color: Colors.red, fontSize: 13)),
-                            ),
-                          const SizedBox(height: 12),
-                          if (kIsWeb && _selectedImageBytes != null)
-                            Image.memory(_selectedImageBytes!, height: 200, fit: BoxFit.cover)
-                          else if (!kIsWeb && _selectedImage != null)
-                            Image.file(_selectedImage!, height: 200, fit: BoxFit.cover),
-                          if (_selectedImage != null || _selectedImageBytes != null) ...[
-                            const SizedBox(height: 24),
-                            // AI Analysis Button
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    const Color(0xFF00BCD4), // Teal
-                                    const Color(0xFF2196F3), // Blue
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF00BCD4).withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: ElevatedButton(
-                                onPressed: _isAnalyzing ? null : _analyzeImage,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 300),
-                                      child: _isAnalyzing
-                                          ? const SizedBox(
-                                              width: 32,
-                                              height: 32,
-                                              child: CircularProgressIndicator(
-                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                                strokeWidth: 3,
-                                              ),
-                                            )
-                                          : const Icon(
-                                              Icons.auto_awesome,
-                                              size: 32,
-                                            ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      _isAnalyzing ? 'Analyzing...' : 'Analyze with AI',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    if (_isAnalyzing)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 8.0),
-                                        child: Text(
-                                          _loadingMessage,
-                                          style: const TextStyle(
-                                            fontStyle: FontStyle.italic,
-                                            color: Colors.white,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                  ],
+      body: WebScaffold(
+        header: AppBar(
+          title: const Text('Publish Item'),
+          backgroundColor: Theme.of(context).colorScheme.background,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        content: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Step 1: Image Selection
+                if (_currentStep == 0)
+                  Container(
+                    key: _stepKeys[0],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (kIsWeb)
+                          ElevatedButton.icon(
+                            onPressed: _pickImage,
+                            icon: const Icon(Icons.photo_library),
+                            label: const Text('Select Image'),
+                          )
+                        else
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _pickImage,
+                                  icon: const Icon(Icons.photo_library),
+                                  label: const Text('Select Image'),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Manual Input Button
-                            OutlinedButton(
-                              onPressed: _nextStep,
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _takePhoto,
+                                  icon: const Icon(Icons.camera_alt),
+                                  label: const Text('Take Photo'),
+                                ),
                               ),
-                              child: const Text('Enter Details Manually'),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                  // Step 2: Item Details
-                  if (_currentStep == 1)
-                    Container(
-                      key: _stepKeys[1],
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextFormField(
-                            controller: _titleController,
-                            decoration: const InputDecoration(labelText: 'Title'),
-                            validator: (v) => v == null || v.isEmpty ? 'Enter a title' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _descriptionController,
-                            decoration: const InputDecoration(labelText: 'Description'),
-                            maxLines: 3,
-                            validator: (v) => v == null || v.isEmpty ? 'Enter a description' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _brandController,
-                            decoration: const InputDecoration(labelText: 'Brand'),
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _estimatedValueController,
-                            decoration: const InputDecoration(labelText: 'Estimated Value'),
-                          ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
-                            value: _category,
-                            items: const [
-                              DropdownMenuItem<String>(value: 'Electronics', child: Text('Electronics')),
-                              DropdownMenuItem<String>(value: 'Furniture', child: Text('Furniture')),
-                              DropdownMenuItem<String>(value: 'Clothing', child: Text('Clothing')),
-                              DropdownMenuItem<String>(value: 'Books', child: Text('Books')),
-                              DropdownMenuItem<String>(value: 'Sports', child: Text('Sports')),
-                              DropdownMenuItem<String>(value: 'Other', child: Text('Other')),
                             ],
-                            onChanged: (v) => setState(() => _category = v ?? 'Other'),
-                            decoration: const InputDecoration(labelText: 'Category'),
-                            validator: (v) => v == null ? 'Select a category' : null,
                           ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
-                            value: _condition,
-                            items: const [
-                              DropdownMenuItem<String>(value: 'New', child: Text('New')),
-                              DropdownMenuItem<String>(value: 'Like New', child: Text('Like New')),
-                              DropdownMenuItem<String>(value: 'Good', child: Text('Good')),
-                              DropdownMenuItem<String>(value: 'Fair', child: Text('Fair')),
-                              DropdownMenuItem<String>(value: 'Poor', child: Text('Poor')),
-                            ],
-                            onChanged: (v) => setState(() => _condition = v ?? 'Good'),
-                            decoration: const InputDecoration(labelText: 'Condition'),
-                            validator: (v) => v == null ? 'Select a condition' : null,
+                        const SizedBox(height: 4),
+                        Text('Max file size: 5MB', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                        if (_imageError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(_imageError!, style: TextStyle(color: Colors.red, fontSize: 13)),
                           ),
-                          const SizedBox(height: 16),
-                          // Submit Button
+                        const SizedBox(height: 12),
+                        if (kIsWeb && _selectedImageBytes != null)
+                          Image.memory(_selectedImageBytes!, height: 200, fit: BoxFit.cover)
+                        else if (!kIsWeb && _selectedImage != null)
+                          Image.file(_selectedImage!, height: 200, fit: BoxFit.cover),
+                        if (_selectedImage != null || _selectedImageBytes != null) ...[
+                          const SizedBox(height: 24),
+                          // AI Analysis Button
                           Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -439,7 +297,7 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
                               ],
                             ),
                             child: ElevatedButton(
-                              onPressed: _isAnalyzing ? null : _submit,
+                              onPressed: _isAnalyzing ? null : _analyzeImage,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.transparent,
                                 foregroundColor: Colors.white,
@@ -462,28 +320,173 @@ class _PublishItemScreenState extends ConsumerState<PublishItemScreen> {
                                             ),
                                           )
                                         : const Icon(
-                                            Icons.check_circle_outline,
+                                            Icons.auto_awesome,
                                             size: 32,
                                           ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    _isAnalyzing ? 'Publishing...' : 'Publish Item',
+                                    _isAnalyzing ? 'Analyzing...' : 'Analyze with AI',
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                     ),
                                   ),
+                                  if (_isAnalyzing)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Text(
+                                        _loadingMessage,
+                                        style: const TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                          color: Colors.white,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          // Manual Input Button
+                          OutlinedButton(
+                            onPressed: _nextStep,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('Enter Details Manually'),
+                          ),
                         ],
-                      ),
+                      ],
                     ),
-                ],
-              ),
+                  ),
+
+                // Step 2: Item Details
+                if (_currentStep == 1)
+                  Container(
+                    key: _stepKeys[1],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          controller: _titleController,
+                          decoration: const InputDecoration(labelText: 'Title'),
+                          validator: (v) => v == null || v.isEmpty ? 'Enter a title' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _descriptionController,
+                          decoration: const InputDecoration(labelText: 'Description'),
+                          maxLines: 3,
+                          validator: (v) => v == null || v.isEmpty ? 'Enter a description' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _brandController,
+                          decoration: const InputDecoration(labelText: 'Brand'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _estimatedValueController,
+                          decoration: const InputDecoration(labelText: 'Estimated Value'),
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: _category,
+                          items: const [
+                            DropdownMenuItem<String>(value: 'Electronics', child: Text('Electronics')),
+                            DropdownMenuItem<String>(value: 'Furniture', child: Text('Furniture')),
+                            DropdownMenuItem<String>(value: 'Clothing', child: Text('Clothing')),
+                            DropdownMenuItem<String>(value: 'Books', child: Text('Books')),
+                            DropdownMenuItem<String>(value: 'Sports', child: Text('Sports')),
+                            DropdownMenuItem<String>(value: 'Other', child: Text('Other')),
+                          ],
+                          onChanged: (v) => setState(() => _category = v ?? 'Other'),
+                          decoration: const InputDecoration(labelText: 'Category'),
+                          validator: (v) => v == null ? 'Select a category' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: _condition,
+                          items: const [
+                            DropdownMenuItem<String>(value: 'New', child: Text('New')),
+                            DropdownMenuItem<String>(value: 'Like New', child: Text('Like New')),
+                            DropdownMenuItem<String>(value: 'Good', child: Text('Good')),
+                            DropdownMenuItem<String>(value: 'Fair', child: Text('Fair')),
+                            DropdownMenuItem<String>(value: 'Poor', child: Text('Poor')),
+                          ],
+                          onChanged: (v) => setState(() => _condition = v ?? 'Good'),
+                          decoration: const InputDecoration(labelText: 'Condition'),
+                          validator: (v) => v == null ? 'Select a condition' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        // Submit Button
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF00BCD4), // Teal
+                                const Color(0xFF2196F3), // Blue
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF00BCD4).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: _isAnalyzing ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: _isAnalyzing
+                                      ? const SizedBox(
+                                          width: 32,
+                                          height: 32,
+                                          child: CircularProgressIndicator(
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            strokeWidth: 3,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.check_circle_outline,
+                                          size: 32,
+                                        ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _isAnalyzing ? 'Publishing...' : 'Publish Item',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

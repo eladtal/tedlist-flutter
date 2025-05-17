@@ -155,7 +155,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: WebScaffold(
-          child: LayoutBuilder(
+          header: AppBar(
+            title: const Text('Tedlist'),
+            backgroundColor: Theme.of(context).colorScheme.background,
+            elevation: 0,
+            centerTitle: true,
+          ),
+          content: LayoutBuilder(
             builder: (context, constraints) => SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -193,6 +199,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               prefixIcon: Icon(Icons.email),
                             ),
                             keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your email';
@@ -213,6 +221,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               prefixIcon: Icon(Icons.lock),
                             ),
                             obscureText: true,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _login(),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your password';
@@ -252,7 +262,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           // Register link
                           TextButton(
                             onPressed: () {
-                              // TODO: Navigate to register screen when created
+                              context.go('/register');
                             },
                             child: const Text('Don\'t have an account? Sign up'),
                           ),

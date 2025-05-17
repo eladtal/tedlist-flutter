@@ -8,6 +8,7 @@ import '../features/items/publish_item_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
+import '../widgets/web_scaffold.dart';
 
 // Static navigation class that can be called from anywhere
 class AppRouter {
@@ -127,36 +128,57 @@ class ScaffoldWithBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      bottomNavigationBar: NavigationBar(
-        onDestinationSelected: (index) {
-          switch (index) {
-            case 0:
-              context.go('/');
-              break;
-            case 1:
-              context.go('/publish');
-              break;
-            case 2:
-              context.go('/profile');
-              break;
-          }
-        },
-        selectedIndex: _calculateSelectedIndex(context),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              constraints: BoxConstraints(maxWidth: kWebMaxWidth),
+              child: NavigationBar(
+                onDestinationSelected: (index) {
+                  switch (index) {
+                    case 0:
+                      context.go('/');
+                      break;
+                    case 1:
+                      context.go('/publish');
+                      break;
+                    case 2:
+                      context.go('/profile');
+                      break;
+                  }
+                },
+                selectedIndex: _calculateSelectedIndex(context),
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home),
+                    label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.add_circle_outline, size: 32),
+                    selectedIcon: Icon(Icons.add_circle, size: 32),
+                    label: 'Publish',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
+                    label: 'Profile',
+                  ),
+                ],
+              ),
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.add_circle_outline, size: 32),
-            selectedIcon: Icon(Icons.add_circle, size: 32),
-            label: 'Publish',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+          Center(
+            child: Container(
+              constraints: BoxConstraints(maxWidth: kWebMaxWidth),
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                '© 2024 Tedlist. All rights reserved.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
         ],
       ),
