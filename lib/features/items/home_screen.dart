@@ -8,7 +8,10 @@ import '../../services/event_service.dart';
 import 'dart:async';
 import '../../providers/item_provider.dart';
 import '../../widgets/web_scaffold.dart';
+import '../../widgets/swipeable_item_card.dart';
 import 'package:flutter/gestures.dart';
+import '../trading/trading_screen.dart';
+import '../items/my_items_screen.dart';
 
 String getProxyImageUrl(dynamic imageUrl) {
   if (imageUrl == null || imageUrl == '') return '';
@@ -145,9 +148,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             if (items.isEmpty) {
               return const Center(child: Text('No items found.'));
             }
-            final myItems = _currentUserId == null
-                ? []
-                : items.where((item) => item['owner']?['_id'] == _currentUserId).toList();
             final featuredItems = _currentUserId == null
                 ? items
                 : items.where((item) => item['owner']?['_id'] != _currentUserId).toList();
@@ -158,38 +158,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
               },
               child: CustomScrollView(
                 slivers: [
-                  // My Items Section
-                  if (myItems.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'My Items',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 220,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: myItems.length,
-                                separatorBuilder: (_, __) => const SizedBox(width: 16),
-                                itemBuilder: (context, index) {
-                                  final item = myItems[index];
-                                  return SizedBox(
-                                    width: 180,
-                                    child: _buildItemCard(item),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   // Categories
                   SliverToBoxAdapter(
                     child: Padding(
@@ -280,110 +248,170 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   }
 
   Widget _buildItemCard(Map<String, dynamic> item) {
-    final imageUrl = getProxyImageUrl(
-      (item['images'] is List && item['images'].isNotEmpty) ? item['images'][0] : null
-    );
-    // Debug: Print the image URLs for inspection
-    debugPrint('Item: ${item['title'] ?? item['id']}');
-    debugPrint('  images: ${item['images']}');
-    debugPrint('  imageUrl used: ${imageUrl}');
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () async {
-          debugPrint('Item card tapped: ${item['title']}');
-          // Navigate to detail and WAIT for result
-          final result = await Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ItemDetailScreen(item: item),
+    final imageUrl = (item['images'] is List && item['images'].isNotEmpty) 
+      ? getProxyImageUrl(item['images'][0]) 
+      : '';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ItemDetailScreen(item: item),
+          ),
+        );
+      },
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Item Image
+            Expanded(
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.error),
+                ),
+              ),
             ),
-          );
-          
-          debugPrint('Navigation result from detail screen: $result');
-          
-          // Refresh regardless of result - this ensures we have current data
-          debugPrint('Refreshing items list after returning from detail screen');
-          await _refreshItems();
-        },
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Item Image
-              Expanded(
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: CircularProgressIndicator(),
+            
+            // Item Details
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item['title'] ?? '',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.error),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (item['condition'] != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            item['condition'],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSecondary,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 4),
+                      if (item['category'] != null)
+                        Expanded(
+                          child: Text(
+                            item['category'],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
                   ),
-                ),
+                ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showItemSelectionDialog(BuildContext context, List<Map<String, dynamic>> myItems) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose an Item to Trade'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: myItems.length,
+            itemBuilder: (context, index) {
+              final item = myItems[index];
+              final imageUrl = (item['images'] is List && item['images'].isNotEmpty)
+                  ? getProxyImageUrl(item['images'][0])
+                  : '';
               
-              // Item Details
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item['title'] ?? '',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+              return ListTile(
+                leading: imageUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey[300],
+                            width: 48,
+                            height: 48,
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey[300],
+                            width: 48,
+                            height: 48,
+                            child: const Icon(Icons.error),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        width: 48,
+                        height: 48,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                title: Text(item['title'] ?? ''),
+                subtitle: item['condition'] != null
+                    ? Text(item['condition'])
+                    : null,
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TradingScreen(
+                        myItem: item,
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        if (item['condition'] != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              item['condition'],
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSecondary,
-                              ),
-                            ),
-                          ),
-                        const SizedBox(width: 4),
-                        if (item['category'] != null)
-                          Expanded(
-                            child: Text(
-                              item['category'],
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                  );
+                },
+              );
+            },
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+        ],
       ),
     );
   }

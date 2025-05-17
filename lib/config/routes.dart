@@ -9,6 +9,7 @@ import '../features/profile/profile_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../widgets/web_scaffold.dart';
+import '../features/items/my_items_screen.dart';
 
 // Static navigation class that can be called from anywhere
 class AppRouter {
@@ -94,6 +95,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               return const HomeScreen();
             },
           ),
+          GoRoute(
+            path: '/my-items',
+            name: 'myItems',
+            builder: (context, state) => const MyItemsScreen(),
+          ),
         ],
       ),
     ],
@@ -141,9 +147,12 @@ class ScaffoldWithBottomNav extends StatelessWidget {
                       context.go('/');
                       break;
                     case 1:
-                      context.go('/publish');
+                      context.go('/my-items');
                       break;
                     case 2:
+                      context.go('/publish');
+                      break;
+                    case 3:
                       context.go('/profile');
                       break;
                   }
@@ -154,6 +163,11 @@ class ScaffoldWithBottomNav extends StatelessWidget {
                     icon: Icon(Icons.home_outlined),
                     selectedIcon: Icon(Icons.home),
                     label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.inventory_2_outlined),
+                    selectedIcon: Icon(Icons.inventory_2),
+                    label: 'My Items',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.add_circle_outline, size: 32),
@@ -187,8 +201,9 @@ class ScaffoldWithBottomNav extends StatelessWidget {
 
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
-    if (location.startsWith('/publish')) return 1;
-    if (location.startsWith('/profile')) return 2;
+    if (location.startsWith('/publish')) return 2;
+    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/my-items')) return 1;
     return 0;
   }
 } 

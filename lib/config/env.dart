@@ -3,7 +3,12 @@ import 'dart:io' show Platform;
 
 class Env {
   static String get apiUrl {
-    // FORCE LOCAL BACKEND FOR ALL BUILDS
-    return 'http://localhost:8000';
+    if (kIsWeb) {
+      // Web: use local backend for development
+      return 'http://localhost:8000';
+    } else {
+      // Mobile: use production backend
+      return 'https://tedlist-backend.onrender.com';
+    }
   }
 } 
