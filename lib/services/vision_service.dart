@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../config/env.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_service.dart';
@@ -45,18 +46,48 @@ class VisionService {
   Future<Map<String, dynamic>> analyzeImage(File imageFile) async {
     debugPrint('Starting image analysis with OpenAI: \\${imageFile.path}');
     try {
+      // Validate the file format
+      final String fileName = imageFile.path.toLowerCase();
+      if (!fileName.endsWith('.jpg') && !fileName.endsWith('.jpeg') && 
+          !fileName.endsWith('.png') && !fileName.endsWith('.webp')) {
+        debugPrint('Unsupported image format: $fileName');
+        return {
+          'success': false,
+          'error': 'Unsupported image format. Please use JPG, PNG or WebP format.',
+        };
+      }
+
       final uri = Uri.parse('$baseUrl/api/vision/openai/analyze');
       final request = http.MultipartRequest('POST', uri);
-      request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+      
+      // Add a more specific content-type based on file extension
+      MediaType contentType = MediaType('image', 'jpeg');
+      if (fileName.endsWith('.png')) {
+        contentType = MediaType('image', 'png');
+      } else if (fileName.endsWith('.webp')) {
+        contentType = MediaType('image', 'webp');
+      }
+      
+      // Add the file with specific content type
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image', 
+          imageFile.path,
+          contentType: contentType,
+        )
+      );
+      
       // Add auth if needed
       final token = await _apiService.getToken();
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
+      
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
       debugPrint('Response status code: \\${response.statusCode}');
       debugPrint('Response body: \\${response.body}');
+      
       if (response.statusCode >= 200 && response.statusCode < 300) {
         debugPrint('OpenAI Vision analysis successful');
         final body = json.decode(response.body);
@@ -66,9 +97,18 @@ class VisionService {
         };
       } else {
         debugPrint('Error response: \\${response.body}');
+        Map<String, dynamic> errorBody = {};
+        try {
+          errorBody = json.decode(response.body);
+        } catch (e) {
+          debugPrint('Error parsing error response: $e');
+        }
+        
+        String errorMessage = errorBody['error'] ?? 'Failed to analyze image';
         return {
           'success': false,
-          'error': 'Failed to analyze image: \\${response.statusCode}',
+          'error': errorMessage,
+          'statusCode': response.statusCode,
         };
       }
     } catch (e) {
@@ -106,18 +146,28 @@ class VisionService {
     try {
       final uri = Uri.parse('$baseUrl/api/vision/openai/analyze');
       final request = http.MultipartRequest('POST', uri);
+      
+      // Use a more specific filename and content-type to help server identify format
       request.files.add(
-        http.MultipartFile.fromBytes('image', imageBytes, filename: 'upload.png'),
+        http.MultipartFile.fromBytes(
+          'image', 
+          imageBytes, 
+          filename: 'upload.jpg',
+          contentType: MediaType('image', 'jpeg'),
+        ),
       );
+
       // Add auth if needed
       final token = await _apiService.getToken();
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
+      
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
       debugPrint('Response status code: \\${response.statusCode}');
       debugPrint('Response body: \\${response.body}');
+      
       if (response.statusCode >= 200 && response.statusCode < 300) {
         debugPrint('OpenAI Vision analysis successful (web)');
         final body = json.decode(response.body);
@@ -127,9 +177,18 @@ class VisionService {
         };
       } else {
         debugPrint('Error response: \\${response.body}');
+        Map<String, dynamic> errorBody = {};
+        try {
+          errorBody = json.decode(response.body);
+        } catch (e) {
+          debugPrint('Error parsing error response: $e');
+        }
+        
+        String errorMessage = errorBody['error'] ?? 'Failed to analyze image';
         return {
           'success': false,
-          'error': 'Failed to analyze image: \\${response.statusCode}',
+          'error': errorMessage,
+          'statusCode': response.statusCode,
         };
       }
     } catch (e) {
