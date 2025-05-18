@@ -27,11 +27,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _loadUserData() async {
     try {
       setState(() => _isLoading = true);
-      final response = await _apiService.get('api/auth/validate');
+      final response = await _apiService.get('auth/validate');
+      
+      // Get user's items to count them
+      final itemsResponse = await _apiService.get('items/user');
+      
+      // Extract items count
+      int itemsCount = 0;
+      if (itemsResponse is Map && itemsResponse['items'] != null) {
+        itemsCount = (itemsResponse['items'] as List).length;
+      } else if (itemsResponse is List) {
+        itemsCount = itemsResponse.length;
+      }
+      
+      // Create a modified user data object with the correct items count
+      Map<String, dynamic> userData = response;
+      
+      // Create stats object if it doesn't exist
+      if (userData['user'] != null && userData['user']['stats'] == null) {
+        userData['user']['stats'] = {};
+      }
+      
+      // Add correct listings count to stats
+      if (userData['user'] != null && userData['user']['stats'] != null) {
+        userData['user']['stats']['listings'] = itemsCount;
+      }
+      
       setState(() {
-        _userData = response;
+        _userData = userData;
         _isLoading = false;
       });
+      
+      print('User data loaded: ${_userData?['user']}');
+      print('Items count: $itemsCount');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -109,7 +137,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             radius: 50,
                             backgroundColor: theme.colorScheme.primary,
                             child: Text(
-                              _userData?['name']?[0]?.toUpperCase() ?? 'U',
+                              _userData?['user']?['name']?[0]?.toUpperCase() ?? 'U',
                               style: theme.textTheme.headlineLarge?.copyWith(
                                 color: theme.colorScheme.onPrimary,
                               ),
@@ -117,11 +145,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            _userData?['name'] ?? 'User',
+                            _userData?['user']?['name'] ?? 'User',
                             style: theme.textTheme.headlineSmall,
                           ),
                           Text(
-                            _userData?['email'] ?? '',
+                            _userData?['user']?['email'] ?? '',
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -149,17 +177,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 _StatItem(
                                   icon: Icons.swap_horiz,
                                   label: 'Trades',
-                                  value: _userData?['stats']?['trades']?.toString() ?? '0',
+                                  value: _userData?['user']?['stats']?['trades']?.toString() ?? '0',
                                 ),
                                 _StatItem(
                                   icon: Icons.inventory_2,
                                   label: 'Listings',
-                                  value: _userData?['stats']?['listings']?.toString() ?? '0',
+                                  value: _userData?['user']?['stats']?['listings']?.toString() ?? '0',
                                 ),
                                 _StatItem(
                                   icon: Icons.star,
                                   label: 'XP',
-                                  value: _userData?['stats']?['xp']?.toString() ?? '0',
+                                  value: _userData?['user']?['stats']?['xp']?.toString() ?? '0',
                                 ),
                               ],
                             ),
@@ -205,6 +233,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             trailing: const Icon(Icons.chevron_right),
                             enabled: !_biometricForgotten && !_isLoading,
                             onTap: (!_biometricForgotten && !_isLoading) ? _forgetBiometricLogin : null,
+                          ),
+                          const Divider(height: 1),
+                          // Dedicated logout button with red color for emphasis
+                          ListTile(
+                            leading: const Icon(Icons.logout, color: Colors.red),
+                            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                            onTap: _isLoading ? null : _logout,
                           ),
                         ],
                       ),

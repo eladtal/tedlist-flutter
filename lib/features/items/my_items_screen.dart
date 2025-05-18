@@ -8,7 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/api_service.dart';
 
 final currentUserIdProvider = FutureProvider<String?>((ref) async {
-  final response = await ApiService().get('api/auth/validate');
+  final response = await ApiService().get('auth/validate');
   return response['_id'] ?? response['id'] ?? response['user']?['_id'];
 });
 

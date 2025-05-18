@@ -40,7 +40,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
       
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/');
+        context.go('/');
       }
     } catch (e) {
       if (mounted) {

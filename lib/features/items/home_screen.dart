@@ -123,7 +123,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
   Future<void> _fetchCurrentUserId() async {
     try {
-      final response = await ApiService().get('api/auth/validate');
+      final response = await ApiService().get('auth/validate');
       if (mounted) {
         setState(() {
           _currentUserId = response['_id'] ?? response['id'] ?? response['user']?['_id'];
@@ -227,7 +227,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                             data: (items) => items,
                             orElse: () => [],
                           );
-                          final myItems = items.map((item) => Map<String, dynamic>.from(item)).toList();
+                          
+                          // Filter to only show the current user's items
+                          final myItems = items
+                            .where((item) {
+                              // Extract the user ID from the item
+                              String itemUserId = '';
+                              if (item['userId'] != null) {
+                                itemUserId = item['userId'].toString();
+                              } else if (item['owner'] != null && item['owner']['_id'] != null) {
+                                itemUserId = item['owner']['_id'].toString();
+                              }
+                              
+                              // Only include items that belong to the current user
+                              return itemUserId == _currentUserId;
+                            })
+                            .map((item) => Map<String, dynamic>.from(item))
+                            .toList();
+                          
+                          if (myItems.isEmpty) {
+                            // Show message if user has no items to trade
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('You have no items to trade. Add some items first!'),
+                                duration: Duration(seconds: 3),
+                              ),
+                            );
+                            return;
+                          }
+                          
                           _showItemSelectionDialog(context, myItems);
                         },
                         child: Container(
